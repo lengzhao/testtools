@@ -1,0 +1,8 @@
+{
+    "name": "name3",
+    "method": "helloworld.Greeter/SayHello1",
+    "request": {
+        "name": "hello"
+    },
+    "error":"*"
+}

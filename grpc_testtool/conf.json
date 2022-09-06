@@ -1,0 +1,7 @@
+{
+    "import_path": [
+        "./protos"
+    ],
+    "proto_path": "./protos",
+    "testcase_path": "./testcase"
+}

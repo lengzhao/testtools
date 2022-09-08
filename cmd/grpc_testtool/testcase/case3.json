@@ -1,5 +1,6 @@
 {
     "name": "name3",
+    "service": "helloworld.Greeter",
     "method": "helloworld.Greeter/SayHello1",
     "request": {
         "name": "hello"

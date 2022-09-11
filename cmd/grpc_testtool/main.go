@@ -14,31 +14,6 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-type Config struct {
-	ImportPath   []string `json:"import_path,omitempty"`
-	ProtoPath    string   `json:"proto_path,omitempty"`
-	TestcasePath string   `json:"testcase_path,omitempty"`
-}
-
-var services map[string]grpcurl.DescriptorSource
-
-var conf Config = Config{
-	ImportPath:   []string{"./protos"},
-	ProtoPath:    "./protos",
-	TestcasePath: "./testcase",
-}
-
-type multiString []string
-
-func (s *multiString) String() string {
-	return strings.Join(*s, ",")
-}
-
-func (s *multiString) Set(value string) error {
-	*s = append(*s, value)
-	return nil
-}
-
 func main() {
 	address := flag.String("addr", "localhost:50051", "the grpc server address")
 	importPath := flag.String("import", "./protos", "import path of proto, split with ','")
@@ -68,11 +43,12 @@ func main() {
 		log.Fatal("fail to dial ", *address, err)
 	}
 	for _, cs := range caseList {
+		log.Println("-*-start to run testcase:", cs.Name)
 		err := grpct.RunCase(cc, svcs, cs, nil)
 		if err != nil {
 			log.Fatalf("fail to run case:%s %s\n", cs.Name, err)
 		} else {
-			log.Println("success to run case:", cs.Name)
+			log.Println("---success to run case:", cs.Name)
 		}
 	}
 }

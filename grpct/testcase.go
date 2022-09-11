@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/nsf/jsondiff"
 )
@@ -92,7 +93,13 @@ func LoadTestcase(filename string) (*Case, error) {
 	return &testcase, nil
 }
 
-func LoadTestcases(dir string) ([]Case, error) {
+type CaseSlice []Case
+
+func (x CaseSlice) Len() int           { return len(x) }
+func (x CaseSlice) Less(i, j int) bool { return x[i].Name < x[j].Name }
+func (x CaseSlice) Swap(i, j int)      { x[i], x[j] = x[j], x[i] }
+
+func LoadTestcases(dir string) (CaseSlice, error) {
 	var out []Case
 	err := filepath.Walk(dir,
 		func(fn string, info os.FileInfo, err error) error {
@@ -123,6 +130,7 @@ func LoadTestcases(dir string) ([]Case, error) {
 				log.Println("unknow service name:", fn)
 				return nil
 			}
+			testcase.Service = strings.ReplaceAll(testcase.Service, "/", ".")
 			out = append(out, testcase)
 			return nil
 		})

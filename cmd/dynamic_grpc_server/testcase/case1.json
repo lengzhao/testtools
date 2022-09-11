@@ -1,0 +1,11 @@
+{
+    "name": "name1",
+    "service": "helloworld.Greeter",
+    "method": "helloworld.Greeter.SayHello",
+    "request": {
+        "name": "hello"
+    },
+    "response": {
+        "message": "Hello hello"
+    }
+}

@@ -2,6 +2,9 @@
     "name": "name2",
     "service": "helloworld.Greeter",
     "method": "helloworld.Greeter/SayHello",
+    "headers": [],
+    "error_code": 0,
+    "error": "",
     "request": {
         "name": "hello"
     },

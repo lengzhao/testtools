@@ -2,12 +2,13 @@
   "name": "helloworld.Greeter.SayHello",
   "service": "helloworld.Greeter",
   "method": "helloworld.Greeter.SayHello",
-  "headers": null,
+  "headers": [],
+  "error_code": 0,
   "error": "",
   "request": {
-    "name": "aa"
+    "name": ""
   },
   "response": {
-    "message": "Hello aa"
+    "message": ""
   }
 }

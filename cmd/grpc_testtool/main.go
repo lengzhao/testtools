@@ -20,6 +20,7 @@ func main() {
 	protoPath := flag.String("proto", "./protos", "proto path")
 	testcasePath := flag.String("testcase", "./testcase", "testcase path(include json files)")
 	genPath := flag.String("gen", "", "testcase path, new testcase with null value")
+	contn := flag.Bool("c", false, "continue to run when testcase error")
 
 	flag.Parse()
 
@@ -46,7 +47,10 @@ func main() {
 		log.Println("-*-start to run testcase:", cs.Name)
 		err := grpct.RunCase(cc, svcs, cs, nil)
 		if err != nil {
-			log.Fatalf("fail to run case:%s %s\n", cs.Name, err)
+			log.Printf("fail to run case:%s %s\n", cs.Name, err)
+			if !*contn {
+				break
+			}
 		} else {
 			log.Println("---success to run case:", cs.Name)
 		}

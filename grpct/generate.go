@@ -60,11 +60,16 @@ func Generate(dir, serviceName string, descriptor grpcurl.DescriptorSource) erro
 		tc.Name = method
 		tc.Method = method
 		tc.Service = serviceName
+		tc.Headers = make([]string, 0)
 
-		inData, _ := dynamic.NewMessage(mth.GetInputType()).MarshalJSONPB(&dumpParam)
+		inMsg := dynamic.NewMessage(mth.GetInputType())
+		updateDefaultValue(inMsg, descriptor, 20)
+		inData, _ := inMsg.MarshalJSONPB(&dumpParam)
 		tc.Request = grpcParam{data: inData}
 
-		outData, _ := dynamic.NewMessage(mth.GetOutputType()).MarshalJSONPB(&dumpParam)
+		outMsg := dynamic.NewMessage(mth.GetOutputType())
+		updateDefaultValue(outMsg, descriptor, 20)
+		outData, _ := outMsg.MarshalJSONPB(&dumpParam)
 		tc.Response = grpcParam{data: outData}
 		caseData, _ := json.MarshalIndent(tc, "", "  ")
 		fn := path.Join(dir, method+".json")
@@ -81,6 +86,42 @@ func GenerateAll(dir string, svcs Services) error {
 		if err != nil {
 			log.Println("fail to generate service:", key)
 		}
+	}
+	return nil
+}
+
+func updateDefaultValue(msg *dynamic.Message, descriptor grpcurl.DescriptorSource, limit int) error {
+	if limit <= 0 {
+		return nil
+	}
+	fields := msg.GetKnownFields()
+	for _, field := range fields {
+		if field.GetMessageType() == nil {
+			continue
+		}
+		// name := field.GetFullyQualifiedName()
+		name := field.GetMessageType().GetFullyQualifiedName()
+
+		childDesc, err := descriptor.FindSymbol(name)
+		if err != nil {
+			log.Println("fail to find symbol by name:", name, err)
+			continue
+		}
+		cm, ok := childDesc.(*desc.MessageDescriptor)
+		if !ok {
+			log.Println("it is not MessageDescriptor:", name, err)
+			continue
+		}
+		childMsg := dynamic.NewMessage(cm)
+		if msg.GetMessageDescriptor().GetFullyQualifiedName() != name {
+			updateDefaultValue(childMsg, descriptor, limit-1)
+		}
+		if field.IsRepeated() {
+			msg.SetFieldByName(field.GetName(), []*dynamic.Message{childMsg})
+		} else {
+			msg.SetFieldByName(field.GetName(), childMsg)
+		}
+
 	}
 	return nil
 }

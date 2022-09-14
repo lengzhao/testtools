@@ -8,9 +8,10 @@ import (
 
 	"github.com/fullstorydev/grpcurl"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/status"
 )
 
-type CompareFunc func(respStat error, respData, hopeData []byte) error
+type CompareFunc func(respStat *status.Status, respData, hopeData []byte) error
 
 func RunCase(conn *grpc.ClientConn, svcs Services, testcase Case, comp CompareFunc) error {
 	in := bytes.NewReader(testcase.GetRequest())
@@ -38,8 +39,12 @@ func RunCase(conn *grpc.ClientConn, svcs Services, testcase Case, comp CompareFu
 	ctx := context.Background()
 
 	err = grpcurl.InvokeRPC(ctx, fileSource, conn, testcase.Method, testcase.Headers, h, rf.Next)
-	if comp != nil {
-		return comp(err, buff.Bytes(), testcase.GetResponse())
+	if err != nil {
+		log.Println("fail to do InvokeRPC:", testcase.Name, err)
+		return err
 	}
-	return testcase.CompareResponse(buff.Bytes(), err)
+	if comp != nil {
+		return comp(h.Status, buff.Bytes(), testcase.GetResponse())
+	}
+	return testcase.CompareResponse(buff.Bytes(), h.Status)
 }

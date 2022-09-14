@@ -11,16 +11,19 @@ import (
 	"strings"
 
 	"github.com/nsf/jsondiff"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type Case struct {
-	Name     string      `json:"name"`
-	Service  string      `json:"service"`
-	Method   string      `json:"method"`
-	Headers  []string    `json:"headers"`
-	Error    string      `json:"error"`
-	Request  interface{} `json:"request"`
-	Response interface{} `json:"response"`
+	Name      string      `json:"name"`
+	Service   string      `json:"service"`
+	Method    string      `json:"method"`
+	Headers   []string    `json:"headers"`
+	ErrorCode codes.Code  `json:"error_code"`
+	Error     string      `json:"error"`
+	Request   interface{} `json:"request"`
+	Response  interface{} `json:"response"`
 }
 
 func (c Case) GetServeceName() string {
@@ -43,39 +46,44 @@ func (c Case) GetResponse() []byte {
 	return data
 }
 
-func (c Case) CompareResponse(data []byte, err error) error {
-	if err != nil {
-		if c.Error == "" {
-			log.Printf("name:%s,hope success,get error:%s\n", c.Name, err)
+func (c Case) CompareResponse(data []byte, err *status.Status) error {
+	//hope success
+	if c.ErrorCode == codes.OK {
+		if err.Code() != 0 {
+			log.Printf("name:%s,hope success,get error:%s\n", c.Name, err.String())
 			return fmt.Errorf("hope success,get error:%s", err)
 		}
-		if c.Error == "*" {
+		hope := c.GetResponse()
+		if len(hope) == 0 && len(data) == 0 {
 			return nil
 		}
-		if c.Error != err.Error() {
-			log.Printf("name:%s,hope error:%s,get error:%s\n", c.Name, c.Error, err)
-			return fmt.Errorf("different error")
+		if len(hope) == 3 && string(hope) == "\"*\"" && len(data) > 0 {
+			return nil
 		}
-		return nil
-	} else if c.Error != "" {
-		log.Printf("name:%s,hope error:%s,get response:%s\n", c.Name, c.Error, string(data))
-		return fmt.Errorf("hope error")
-	}
-	hope := c.GetResponse()
-	if len(hope) == 0 && len(data) == 0 {
-		return nil
-	}
-	if len(hope) == 3 && string(hope) == "\"*\"" && len(data) > 0 {
-		return nil
-	}
-	ops := jsondiff.DefaultJSONOptions()
-	diff, _ := jsondiff.Compare(hope, data, &ops)
+		ops := jsondiff.DefaultJSONOptions()
+		diff, _ := jsondiff.Compare(hope, data, &ops)
 
-	if diff == jsondiff.FullMatch {
+		if diff == jsondiff.FullMatch {
+			return nil
+		}
+		log.Printf("different response,hope:%s, get:%s\n", hope, data)
+		return fmt.Errorf("different:%s", diff)
+	}
+	if c.Error == "*" {
 		return nil
 	}
-	log.Printf("different response,hope:%s, get:%s\n", hope, data)
-	return fmt.Errorf("different:%s", diff)
+	if c.ErrorCode != err.Code() {
+		log.Printf("name:%s,hope error code:%d,get error:%d\n", c.Name, c.ErrorCode, err.Code())
+		return fmt.Errorf("different error code")
+	}
+	if c.Error == "" {
+		return nil
+	}
+	if c.Error != err.Message() {
+		log.Printf("name:%s,hope error:%s,get error:%s\n", c.Name, c.Error, err)
+		return fmt.Errorf("different error")
+	}
+	return nil
 }
 
 func LoadTestcase(filename string) (*Case, error) {

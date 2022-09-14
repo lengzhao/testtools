@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"strings"
 
 	"github.com/lengzhao/testtools/grpct"
@@ -23,6 +24,7 @@ func main() {
 	importPath := flag.String("import", "./protos", "import path of proto, split with ','")
 	protoPath := flag.String("proto", "./protos", "proto path")
 	testcasePath := flag.String("testcase", "./testcase", "testcase path(include json files)")
+	genPath := flag.String("gen", "", "testcase path, new testcase with null value")
 
 	flag.Parse()
 
@@ -30,6 +32,11 @@ func main() {
 	svcs, err := grpct.LoadProtos(*protoPath, imps)
 	if err != nil {
 		log.Fatal("fail to load protos:", err)
+	}
+	if len(*genPath) > 0 {
+		os.Mkdir(*genPath, os.ModePerm)
+		grpct.GenerateAll(*genPath, svcs)
+		return
 	}
 	caseList, err := grpct.LoadTestcases(*testcasePath)
 	if err != nil {

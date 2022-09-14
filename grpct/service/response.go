@@ -18,24 +18,29 @@ import (
 
 const defaultKey = "default"
 
-type response struct {
-	others map[string]proto.Message
+type respItem struct {
+	msg proto.Message
+	err error
+}
+
+type responseMap struct {
+	others map[string]respItem
 }
 
 type dynamicResponse struct {
 	svcs      grpct.Services
 	testcase  grpct.CaseSlice
-	responses map[string]*response
+	responses map[string]*responseMap
 }
 
 func RespFactoryByTestcase(svcs grpct.Services, caseSlice grpct.CaseSlice) (ResponseFactory, error) {
 	out := dynamicResponse{svcs: svcs, testcase: caseSlice}
-	out.responses = make(map[string]*response)
+	out.responses = make(map[string]*responseMap)
 	for _, it := range caseSlice {
 		responses, ok := out.responses[it.Method]
 		if !ok {
-			responses = &response{}
-			responses.others = make(map[string]proto.Message)
+			responses = &responseMap{}
+			responses.others = make(map[string]respItem)
 			out.responses[it.Method] = responses
 		}
 		options := grpcurl.FormatOptions{
@@ -59,8 +64,9 @@ func RespFactoryByTestcase(svcs grpct.Services, caseSlice grpct.CaseSlice) (Resp
 			continue
 		}
 
-		var respMsg proto.Message
-		{
+		var respMsg respItem
+
+		if it.ErrorCode == codes.OK {
 			out := bytes.NewReader(it.GetResponse())
 			resp := grpcurl.MakeTemplate(mth.GetOutputType())
 
@@ -74,7 +80,9 @@ func RespFactoryByTestcase(svcs grpct.Services, caseSlice grpct.CaseSlice) (Resp
 				log.Println("fail to rf.Next response:", it.Method, err)
 				continue
 			}
-			respMsg = resp
+			respMsg.msg = resp
+		} else {
+			respMsg.err = status.Error(it.ErrorCode, it.Error)
 		}
 		{
 			reqData := it.GetRequest()
@@ -127,7 +135,7 @@ func (d dynamicResponse) handle(ctx context.Context, methodName string, reqData 
 		}
 	}
 
-	return resp, nil
+	return resp.msg, resp.err
 }
 func SHA1(input []byte) string {
 	c := sha1.New()

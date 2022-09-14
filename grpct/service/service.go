@@ -33,7 +33,7 @@ func GetStreamHadler(factory ResponseFactory) grpc.StreamHandler {
 func (s *rawService) handler(srv interface{}, serverStream grpc.ServerStream) error {
 	fullMethodName, ok := grpc.MethodFromServerStream(serverStream)
 	if !ok {
-		return status.Errorf(codes.Internal, "lowLevelServerStream not exists in context")
+		return status.Error(codes.Internal, "lowLevelServerStream not exists in context")
 	}
 
 	for i := 0; ; i++ {

@@ -2,7 +2,7 @@
   "name": "helloworld.Greeter.SayHello",
   "service": "helloworld.Greeter",
   "method": "helloworld.Greeter.SayHello",
-  "headers": null,
+  "headers": [],
   "error": "",
   "request": {
     "name": "aa"

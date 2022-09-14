@@ -2,8 +2,10 @@
     "name": "name3",
     "service": "helloworld.Greeter",
     "method": "helloworld.Greeter/SayHello1",
+    "headers": [],
+    "error_code": 1,
+    "error": "*",
     "request": {
         "name": "hello"
-    },
-    "error":"*"
+    }
 }

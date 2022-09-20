@@ -31,12 +31,6 @@ func (p *grpcParam) UnmarshalJSON(data []byte) error {
 }
 
 func Generate(dir, serviceName string, descriptor grpcurl.DescriptorSource) error {
-	dumpParam := jsonpb.Marshaler{
-		EnumsAsInts:  true,
-		EmitDefaults: true,
-		OrigName:     true,
-		Indent:       "  ",
-	}
 	os.Mkdir(dir, os.ModePerm)
 	log.Println("service:", serviceName)
 	methods, err := grpcurl.ListMethods(descriptor, serviceName)
@@ -46,37 +40,53 @@ func Generate(dir, serviceName string, descriptor grpcurl.DescriptorSource) erro
 	}
 	log.Println("methods:", methods)
 	for _, method := range methods {
-		dsc, err := descriptor.FindSymbol(method)
+		info, err := ShowMethod(descriptor, method)
 		if err != nil {
-			log.Println("not found method:", method, err)
+			log.Println("fail to get description of method:", method, err)
 			continue
 		}
-		mth, ok := dsc.(*desc.MethodDescriptor)
-		if !ok {
-			log.Println("error type of method:", method)
-			continue
-		}
-		var tc Case
-		tc.Name = method
-		tc.Method = method
-		tc.Service = serviceName
-		tc.Headers = make([]string, 0)
-
-		inMsg := dynamic.NewMessage(mth.GetInputType())
-		updateDefaultValue(inMsg, descriptor, 20)
-		inData, _ := inMsg.MarshalJSONPB(&dumpParam)
-		tc.Request = grpcParam{data: inData}
-
-		outMsg := dynamic.NewMessage(mth.GetOutputType())
-		updateDefaultValue(outMsg, descriptor, 20)
-		outData, _ := outMsg.MarshalJSONPB(&dumpParam)
-		tc.Response = grpcParam{data: outData}
-		caseData, _ := json.MarshalIndent(tc, "", "  ")
 		fn := path.Join(dir, method+".json")
-		err = ioutil.WriteFile(fn, caseData, os.ModePerm)
+		err = ioutil.WriteFile(fn, []byte(info), os.ModePerm)
 		log.Println("generate one file:", fn, err)
 	}
 	return nil
+}
+
+func ShowMethod(descriptor grpcurl.DescriptorSource, method string) (string, error) {
+	dsc, err := descriptor.FindSymbol(method)
+	if err != nil {
+		log.Println("not found method:", method, err)
+		return "", err
+	}
+	mth, ok := dsc.(*desc.MethodDescriptor)
+	if !ok {
+		log.Println("error type of method:", method)
+		return "", err
+	}
+	var tc Case
+	tc.Name = method
+	tc.Method = method
+	tc.Service = mth.GetService().GetFullyQualifiedName()
+	tc.Headers = make([]string, 0)
+
+	inMsg := dynamic.NewMessage(mth.GetInputType())
+	updateDefaultValue(inMsg, descriptor, 20)
+	dumpParam := jsonpb.Marshaler{
+		EnumsAsInts:  true,
+		EmitDefaults: true,
+		OrigName:     true,
+		Indent:       "  ",
+	}
+	inData, _ := inMsg.MarshalJSONPB(&dumpParam)
+	tc.Request = grpcParam{data: inData}
+
+	outMsg := dynamic.NewMessage(mth.GetOutputType())
+	updateDefaultValue(outMsg, descriptor, 20)
+	outData, _ := outMsg.MarshalJSONPB(&dumpParam)
+	tc.Response = grpcParam{data: outData}
+	caseData, _ := json.MarshalIndent(tc, "", "  ")
+
+	return string(caseData), nil
 }
 
 func GenerateAll(dir string, svcs Services) error {
